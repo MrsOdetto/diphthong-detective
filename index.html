@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diphthong Detectives</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f6f1e7; --paper:#fffdf8; --ink:#2a2733; --muted:#6c6878; --line:#e4dccd;
+    --accent:#2f5d8a; --ok:#2e8b57; --okbg:#e3f4ea; --bad:#c8463d; --badbg:#fbe6e3;
+    --radius:16px;
+    --ipa:"Charis SIL","Doulos SIL","Gentium Plus","Noto Sans","Segoe UI","Lucida Sans Unicode","Arial Unicode MS",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:Nunito,system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;
+    background-image:radial-gradient(#e9e0cf 1px,transparent 1px);background-size:22px 22px}
+  button{font:inherit;cursor:pointer}
+  .wrap{max-width:1280px;margin:0 auto;padding:18px 20px 40px}
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:14px 20px;margin-bottom:14px}
+  h1{font-family:Fredoka,sans-serif;font-weight:700;font-size:clamp(26px,3.4vw,40px);margin:0;letter-spacing:.3px}
+  h1 small{display:block;font-family:Nunito;font-weight:700;font-size:14px;color:var(--muted);letter-spacing:0}
+  .tabs{display:flex;gap:6px;background:var(--paper);padding:5px;border-radius:999px;border:1px solid var(--line);margin-left:auto}
+  .tab{border:0;background:transparent;padding:9px 16px;border-radius:999px;font-weight:800;color:var(--muted)}
+  .tab[aria-selected="true"]{background:var(--ink);color:#fff}
+  .bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;background:var(--paper);border:1px solid var(--line);
+    border-radius:var(--radius);padding:10px 14px;margin-bottom:14px}
+  .bar label{font-weight:700;color:var(--muted);font-size:14px;display:flex;align-items:center;gap:6px}
+  select{font:inherit;font-weight:700;padding:6px 8px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink);max-width:220px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg button{border:0;background:#fff;padding:7px 12px;font-weight:800;color:var(--muted)}
+  .seg button.on{background:var(--accent);color:#fff}
+  .switch{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;color:var(--ink);cursor:pointer;user-select:none}
+  .switch input{width:20px;height:20px;accent-color:var(--accent)}
+  .btn{border:0;border-radius:12px;padding:9px 16px;font-weight:800;background:var(--ink);color:#fff}
+  .btn.light{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn.big{font-size:18px;padding:12px 22px}
+  .spacer{flex:1}
+  .stats{display:flex;gap:10px;font-weight:800}
+  .pill{background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:15px}
+  .pill.ok{color:var(--ok)} .pill.bad{color:var(--bad)}
+  .hint{font-size:15px;color:var(--muted);font-weight:700;margin:0 0 10px 4px}
+  .hidden{display:none!important}
+
+  /* Bank & cards */
+  .bank{display:flex;flex-wrap:wrap;gap:10px;min-height:70px;padding:14px;background:var(--paper);
+    border:2px dashed var(--line);border-radius:var(--radius);margin-bottom:16px;align-content:flex-start}
+  .bank.empty::after{content:"Tutte le parole sono al loro posto 🎉";color:var(--muted);font-weight:800;margin:auto}
+  .card{display:inline-flex;align-items:center;gap:8px;background:#fff;border:2px solid #d9d0bf;border-radius:14px;
+    padding:8px 8px 8px 16px;font-size:clamp(20px,2vw,26px);font-weight:800;box-shadow:0 3px 0 #d9d0bf;
+    touch-action:none;user-select:none;cursor:grab;transition:transform .12s, box-shadow .12s, border-color .12s}
+  .card:hover{transform:translateY(-2px)}
+  .card.selected{border-color:var(--accent);box-shadow:0 0 0 4px rgba(47,93,138,.25),0 3px 0 var(--accent)}
+  .card.dragging{opacity:.3}
+  .card.ghost{position:fixed;z-index:50;pointer-events:none;transform:rotate(-3deg) scale(1.06);box-shadow:0 12px 24px rgba(0,0,0,.2);margin:0}
+  .card.shake{animation:shake .45s;border-color:var(--bad);background:var(--badbg)}
+  @keyframes shake{0%,100%{transform:none}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+  .spk{border:0;background:#f1ece2;border-radius:10px;width:38px;height:38px;font-size:18px;display:grid;place-items:center;flex:none}
+  .spk:hover{background:#e6dfd1}
+  .spk:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(1)}
+
+  /* Bins */
+  .bins{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px}
+  .bin{--c:#888;background:var(--paper);border:3px solid color-mix(in srgb,var(--c) 45%,white);border-radius:var(--radius);
+    min-height:220px;display:flex;flex-direction:column;cursor:pointer;transition:transform .12s, box-shadow .12s, background .2s;overflow:hidden}
+  .bin.hover,.bin.target{transform:translateY(-3px);box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 30%,transparent);background:#fff}
+  .bin.wrong{animation:flash .5s}
+  @keyframes flash{0%,100%{background:var(--paper)}40%{background:var(--badbg)}}
+  .bin.right{animation:flashok .5s}
+  @keyframes flashok{0%,100%{background:var(--paper)}40%{background:var(--okbg)}}
+  .binhead{background:color-mix(in srgb,var(--c) 16%,white);padding:10px 12px;display:flex;align-items:center;gap:8px;border-bottom:2px solid color-mix(in srgb,var(--c) 30%,white)}
+  .ipa{font-family:var(--ipa);font-weight:700}
+  .binhead .ipa{font-size:clamp(28px,3vw,38px);color:color-mix(in srgb,var(--c) 85%,black);line-height:1}
+  .binhead .key{font-size:13px;font-weight:800;color:var(--muted);line-height:1.2}
+  .binhead .key b{color:var(--ink);font-size:15px}
+  .binhead .spk{margin-left:auto;width:34px;height:34px;font-size:16px;background:#fff}
+  .drop{padding:10px;display:flex;flex-direction:column;gap:6px;flex:1}
+  .chip{display:flex;align-items:center;gap:6px;background:var(--okbg);border:1.5px solid #bfe3cd;border-radius:10px;padding:4px 4px 4px 10px;font-weight:800;font-size:18px;animation:pop .3s}
+  .chip .spk{width:30px;height:30px;font-size:14px;margin-left:auto;background:#fff}
+  @keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:none;opacity:1}}
+
+  /* Odd one out */
+  .oddwrap{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:24px;text-align:center}
+  .oddtop{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+  .oddq{font-family:Fredoka;font-size:clamp(20px,2.4vw,28px);font-weight:600;margin:6px 0 20px}
+  .oddgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;max-width:960px;margin:0 auto}
+  .oddcard{background:#fff;border:3px solid #d9d0bf;border-radius:18px;padding:22px 12px 14px;box-shadow:0 4px 0 #d9d0bf;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:12px;transition:transform .12s}
+  .oddcard:hover{transform:translateY(-3px)}
+  .oddcard .w{font-size:clamp(30px,3.4vw,44px);font-weight:800}
+  .oddcard .s{font-size:26px;min-height:32px;visibility:hidden}
+  .oddwrap.answered .oddcard{cursor:default}
+  .oddwrap.answered .oddcard:hover{transform:none}
+  .oddwrap.answered .oddcard .s{visibility:visible}
+  .oddcard.isodd{border-color:var(--ok);background:var(--okbg);box-shadow:0 4px 0 var(--ok)}
+  .oddcard.wrongpick{border-color:var(--bad);background:var(--badbg);box-shadow:0 4px 0 var(--bad)}
+  .oddfeedback{min-height:34px;font-weight:800;font-size:20px;margin:18px 0 8px}
+  .oddfeedback.ok{color:var(--ok)} .oddfeedback.bad{color:var(--bad)}
+
+  /* Teacher */
+  .teacher{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
+  @media (max-width:820px){.teacher{grid-template-columns:1fr}}
+  .panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+  .panel h2{font-family:Fredoka;font-weight:600;margin:0 0 8px;font-size:22px}
+  .panel p,.panel li{color:var(--muted);font-weight:600;line-height:1.5}
+  textarea{width:100%;min-height:330px;font-family:var(--ipa);font-size:17px;line-height:1.6;padding:12px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--ink);resize:vertical}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
+  .preview{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .preview span{background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-weight:800}
+  .msg{font-weight:800;min-height:24px}
+  .msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+  code{background:#fff;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-family:var(--ipa);color:var(--ink)}
+  table.alias{border-collapse:collapse;margin-top:6px}
+  table.alias td{padding:3px 12px 3px 0;font-weight:700;color:var(--ink)}
+
+  /* Overlay */
+  .overlay{position:fixed;inset:0;background:rgba(42,39,51,.55);display:grid;place-items:center;z-index:60;padding:20px}
+  .modal{background:var(--paper);border-radius:22px;padding:28px;max-width:560px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+  .modal h2{font-family:Fredoka;font-size:34px;margin:0 0 6px}
+  .modal .big{font-size:22px;font-weight:800;margin:10px 0}
+  .review{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0 20px}
+  .review .chip{background:#fff;border-color:var(--line)}
+  #fx{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:80}
+  .notice{background:var(--badbg);color:var(--bad);font-weight:800;padding:10px 14px;border-radius:12px;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🔍 Diphthong Detectives<small>Indaga sui suoni: la grafia inganna, l'orecchio no!</small></h1>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-view="sort" aria-selected="true">Sound Sorting</button>
+      <button class="tab" role="tab" data-view="odd" aria-selected="false">Odd one out</button>
+      <button class="tab" role="tab" data-view="teacher" aria-selected="false">⚙️ Parole</button>
+    </div>
+  </header>
+
+  <div id="ttsNotice" class="notice hidden">Questo browser non supporta la sintesi vocale: l'attività funziona, ma senza audio. Provate con Chrome, Edge o Safari.</div>
+
+  <div class="bar" id="commonBar">
+    <label>Livello
+      <span class="seg" id="levelSeg">
+        <button data-level="base" class="on">Base · 5 suoni</button>
+        <button data-level="adv">Avanzato · tutti e 8</button>
+      </span>
+    </label>
+    <label class="switch" title="Il pulsante audio della parola si sblocca solo dopo la risposta">
+      <input type="checkbox" id="readFirst" checked> 🗣️ Prima leggi ad alta voce
+    </label>
+    <label class="switch" title="Suoni per risposta giusta, sbagliata e fine partita">
+      <input type="checkbox" id="sfxOn" checked> 🔔 Effetti sonori
+    </label>
+    <label>Voce <select id="voiceSel"></select></label>
+    <label>Velocità
+      <select id="rateSel"><option value="0.95">normale</option><option value="0.75" selected>lenta</option><option value="0.6">molto lenta</option></select>
+    </label>
+    <span class="spacer"></span>
+    <button class="btn light" id="fsBtn">⛶ Schermo intero</button>
+  </div>
+
+  <!-- SORTING -->
+  <section id="view-sort">
+    <div class="bar">
+      <div class="stats">
+        <span class="pill ok" id="sOk">✔ 0 / 0</span>
+        <span class="pill bad" id="sBad">✘ 0 errori</span>
+      </div>
+      <span class="spacer"></span>
+      <button class="btn" id="newSort">🔄 Nuova partita</button>
+    </div>
+    <p class="hint">Leggi la parola ad alta voce, poi trascinala nel contenitore del suono giusto. Puoi anche toccare la parola e poi il contenitore.</p>
+    <div class="bank" id="bank"></div>
+    <div class="bins" id="bins"></div>
+  </section>
+
+  <!-- ODD ONE OUT -->
+  <section id="view-odd" class="hidden">
+    <div class="oddwrap" id="oddwrap">
+      <div class="oddtop">
+        <span class="pill" id="oRound">Round 1 / 10</span>
+        <span class="pill ok" id="oScore">Punti: 0</span>
+        <button class="btn light" id="newOdd">🔄 Ricomincia</button>
+      </div>
+      <div class="oddq">Leggi le quattro parole ad alta voce. Quale ha un suono <u>diverso</u>?</div>
+      <div class="oddgrid" id="oddgrid"></div>
+      <div class="oddfeedback" id="oddfb"></div>
+      <button class="btn big hidden" id="oddNext">Avanti ▶</button>
+    </div>
+  </section>
+
+  <!-- TEACHER -->
+  <section id="view-teacher" class="hidden">
+    <div class="teacher">
+      <div class="panel">
+        <h2>Le parole dell'indagine</h2>
+        <p>Una riga per ogni dittongo: simbolo, due punti, parole separate da virgole.</p>
+        <textarea id="wordsTa" spellcheck="false"></textarea>
+        <div class="row">
+          <button class="btn" id="saveWords">💾 Salva e usa</button>
+          <button class="btn light" id="resetWords">↩ Ripristina parole di esempio</button>
+          <span class="msg" id="wordsMsg"></span>
+        </div>
+        <div class="preview" id="preview"></div>
+      </div>
+      <div class="panel">
+        <h2>Impostazioni</h2>
+        <label style="font-weight:800;display:flex;gap:8px;align-items:center">Parole per suono in ogni partita di Sorting
+          <select id="perSound"><option>3</option><option selected>4</option><option>5</option><option>6</option><option>8</option></select>
+        </label>
+        <h2 style="margin-top:18px">Scrivere i simboli</h2>
+        <p>Non serve la tastiera fonetica: potete scrivere queste abbreviazioni e vengono convertite da sole.</p>
+        <table class="alias">
+          <tr><td><code>ei</code> → <span class="ipa">eɪ</span></td><td><code>ai</code> → <span class="ipa">aɪ</span></td><td><code>oi</code> → <span class="ipa">ɔɪ</span></td></tr>
+          <tr><td><code>au</code> → <span class="ipa">aʊ</span></td><td><code>ou</code> → <span class="ipa">əʊ</span></td><td><code>ia</code> → <span class="ipa">ɪə</span></td></tr>
+          <tr><td><code>ea</code> → <span class="ipa">eə</span></td><td><code>ua</code> → <span class="ipa">ʊə</span></td><td></td></tr>
+        </table>
+        <p>Il livello <b>Base</b> usa <span class="ipa">eɪ aɪ ɔɪ aʊ əʊ</span>; il livello <b>Avanzato</b> usa tutte le righe della lista, cioè gli 8 dittonghi: <span class="ipa">eɪ aɪ ɔɪ aʊ əʊ ɪə eə ʊə</span>.</p>
+        <p>Nota su <span class="ipa">/ʊə/</span>: nell'inglese britannico di oggi molte parole (<i>poor, sure, your</i>) si pronunciano ormai con <span class="ipa">/ɔː/</span>, per questo negli esempi ci sono parole in cui il dittongo si sente ancora bene.</p>
+        <p>Le parole salvate restano in questo browser. Su un altro computer o sulla LIM vanno incollate di nuovo: conviene tenerne una copia.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="overlay hidden" id="overlay"><div class="modal" id="modal"></div></div>
+
+<script>
+(function(){
+  "use strict";
+  var DEFAULT_TEXT = [
+    "eɪ: rain, eight, they, great, play, cake, train, day, grey, steak",
+    "aɪ: time, fly, high, eye, buy, night, bike, my, light, pie",
+    "ɔɪ: boy, coin, toy, noise, enjoy, voice, oil, point",
+    "aʊ: now, house, cow, mouth, brown, town, out, loud",
+    "əʊ: boat, snow, phone, go, road, know, home, toe, though",
+    "ɪə: ear, here, beer, near, deer, clear",
+    "eə: hair, chair, where, bear, care, there, pear",
+    "ʊə: tour, cure, pure, tourist, during, Europe, jury"
+  ].join("\n");
+  var OLD_DEFAULT = DEFAULT_TEXT.split("\n").slice(0,7).join("\n");
+  var ALIAS = {ei:"eɪ",ai:"aɪ",oi:"ɔɪ","ɔi":"ɔɪ",au:"aʊ",ou:"əʊ","əu":"əʊ",eu:"əʊ",ia:"ɪə","iə":"ɪə",ea:"eə",ua:"ʊə","uə":"ʊə"};
+  var KEY = {"eɪ":"day","aɪ":"my","ɔɪ":"boy","aʊ":"now","əʊ":"go","ɪə":"ear","eə":"hair","ʊə":"tour"};
+  var BASE = ["eɪ","aɪ","ɔɪ","aʊ","əʊ"];
+  var PALETTE = ["#e07a2f","#3b82c4","#8e5bc7","#2f9e6e","#d4476b","#b88a12","#1f9aa8","#6b7a2f","#a0522d","#5468d4"];
+  var STORE = "diphthong-detectives-words";
+
+  var $ = function(id){return document.getElementById(id);};
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+  function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+
+  function normSym(s){
+    s=s.trim().replace(/^\/+|\/+$/g,"").trim();
+    var k=s.toLowerCase();
+    return ALIAS[k]||s;
+  }
+  function parse(text){
+    var groups=[],errors=[],seen={};
+    text.split(/\r?\n/).forEach(function(line,i){
+      if(!line.trim()) return;
+      var idx=line.indexOf(":");
+      if(idx<0){errors.push("Riga "+(i+1)+": manca «:»");return;}
+      var sym=normSym(line.slice(0,idx));
+      if(!sym){errors.push("Riga "+(i+1)+": manca il simbolo");return;}
+      var words=line.slice(idx+1).split(/[,;]/).map(function(w){return w.trim();}).filter(Boolean);
+      var g=groups.find(function(x){return x.sym===sym;});
+      if(!g){g={sym:sym,words:[]};groups.push(g);}
+      words.forEach(function(w){var k=w.toLowerCase();if(seen[k]){if(seen[k]!==sym)errors.push("«"+w+"» compare in due suoni");return;}seen[k]=sym;g.words.push(w);});
+    });
+    groups=groups.filter(function(g){return g.words.length;});
+    return {groups:groups,errors:errors};
+  }
+
+  var state={text:DEFAULT_TEXT,groups:[],level:"base",readFirst:true,perSound:4,view:"sort"};
+  try{var saved=localStorage.getItem(STORE);if(saved&&saved!==OLD_DEFAULT)state.text=saved;}catch(e){}
+  state.groups=parse(state.text).groups;
+  if(state.groups.length<2){state.text=DEFAULT_TEXT;state.groups=parse(DEFAULT_TEXT).groups;}
+
+  function colorOf(sym){var i=state.groups.findIndex(function(g){return g.sym===sym;});return PALETTE[(i<0?0:i)%PALETTE.length];}
+  function keyOf(g){return KEY[g.sym]||g.words[0];}
+  function active(){
+    if(state.level==="base"){var b=state.groups.filter(function(g){return BASE.indexOf(g.sym)>=0;});if(b.length>=2)return b;}
+    return state.groups;
+  }
+
+  /* ---------- Speech ---------- */
+  var hasTTS = "speechSynthesis" in window && typeof SpeechSynthesisUtterance!=="undefined";
+  var voices=[];
+  function loadVoices(){
+    if(!hasTTS) return;
+    var all=[];try{all=speechSynthesis.getVoices();}catch(e){}
+    voices=all.filter(function(v){return /^en([-_]|$)/i.test(v.lang);});
+    voices.sort(function(a,b){
+      var sa=/GB/i.test(a.lang)?0:/US/i.test(a.lang)?1:2, sb=/GB/i.test(b.lang)?0:/US/i.test(b.lang)?1:2;
+      return sa-sb;
+    });
+    var sel=$("voiceSel"),prev=sel.value;
+    sel.innerHTML="";
+    if(!voices.length){var o=document.createElement("option");o.value="";o.textContent="Inglese (predefinita)";sel.appendChild(o);return;}
+    voices.forEach(function(v){
+      var o=document.createElement("option");o.value=v.voiceURI;
+      var acc=/GB/i.test(v.lang)?"🇬🇧":/US/i.test(v.lang)?"🇺🇸":/AU/i.test(v.lang)?"🇦🇺":"🌐";
+      o.textContent=acc+" "+v.name.replace(/Microsoft |Google |Online \(Natural\)| - English.*$/g,"").slice(0,28);
+      sel.appendChild(o);
+    });
+    if(prev&&voices.some(function(v){return v.voiceURI===prev;}))sel.value=prev;
+  }
+  function speak(t){
+    if(!hasTTS) return;
+    try{
+      speechSynthesis.cancel();
+      var u=new SpeechSynthesisUtterance(t);
+      var v=voices.find(function(x){return x.voiceURI===$("voiceSel").value;});
+      if(v){u.voice=v;u.lang=v.lang;}else{u.lang="en-GB";}
+      u.rate=parseFloat($("rateSel").value)||0.8;
+      speechSynthesis.speak(u);
+    }catch(e){}
+  }
+  if(hasTTS){loadVoices();try{speechSynthesis.onvoiceschanged=loadVoices;}catch(e){}setTimeout(loadVoices,500);}
+  else{$("ttsNotice").classList.remove("hidden");loadVoices();}
+
+  /* ---------- Sound effects (Web Audio, no files) ---------- */
+  var sfxOn=true;
+  try{if(localStorage.getItem(STORE+"-sfx")==="0")sfxOn=false;}catch(e){}
+  $("sfxOn").checked=sfxOn;
+  var actx=null;
+  function ac(){
+    if(!sfxOn) return null;
+    try{
+      if(!actx){var C=window.AudioContext||window.webkitAudioContext;if(!C)return null;actx=new C();}
+      if(actx.state==="suspended")actx.resume();
+    }catch(e){return null;}
+    return actx;
+  }
+  function tone(freq,start,dur,type,vol,slideTo){
+    var c=ac();if(!c)return;
+    try{
+      var t=c.currentTime+start,o=c.createOscillator(),g=c.createGain();
+      o.type=type||"sine";o.frequency.setValueAtTime(freq,t);
+      if(slideTo)o.frequency.exponentialRampToValueAtTime(slideTo,t+dur);
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(vol||0.15,t+0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+      o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+dur+0.05);
+    }catch(e){}
+  }
+  var SFX={
+    pick:function(){tone(660,0,0.07,"triangle",0.07);},
+    right:function(){tone(784,0,0.12,"triangle",0.15);tone(1175,0.09,0.22,"triangle",0.15);},
+    wrong:function(){tone(220,0,0.28,"square",0.06,130);tone(165,0.12,0.3,"square",0.045,110);},
+    complete:function(){[523,659,784,1047].forEach(function(f,i){tone(f,i*0.08,0.28,"triangle",0.14);});},
+    win:function(){[523,659,784,659,784,1047].forEach(function(f,i){tone(f,i*0.13,i===5?0.7:0.18,"triangle",0.15);});tone(262,0.65,0.7,"sine",0.1);tone(392,0.65,0.7,"sine",0.08);}
+  };
+  function sfx(n){if(sfxOn&&SFX[n])SFX[n]();}
+  $("sfxOn").addEventListener("change",function(){
+    sfxOn=this.checked;
+    try{localStorage.setItem(STORE+"-sfx",sfxOn?"1":"0");}catch(e){}
+    if(sfxOn)sfx("right");
+  });
+
+  /* ---------- Confetti ---------- */
+  var fx=$("fx"),fxc=fx.getContext("2d"),parts=[],raf=null;
+  var reduceMotion=false;try{reduceMotion=matchMedia("(prefers-reduced-motion: reduce)").matches;}catch(e){}
+  function sizeFx(){var d=window.devicePixelRatio||1;fx.width=innerWidth*d;fx.height=innerHeight*d;fxc.setTransform(d,0,0,d,0,0);}
+  sizeFx();addEventListener("resize",sizeFx);
+  var CCOL=["#e07a2f","#3b82c4","#8e5bc7","#2f9e6e","#d4476b","#f2c230","#1f9aa8"];
+  function confetti(x,y,n,power){
+    if(reduceMotion)n=Math.max(4,Math.round(n/4));
+    for(var i=0;i<n;i++){
+      var a=-Math.PI/2+(Math.random()-0.5)*Math.PI*1.1,s=(power||9)*(0.5+Math.random());
+      parts.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r:Math.random()*6.28,vr:(Math.random()-0.5)*0.3,
+        w:7+Math.random()*6,h:5+Math.random()*5,c:CCOL[Math.floor(Math.random()*CCOL.length)],life:0,round:Math.random()<0.25});
+    }
+    if(!raf)raf=requestAnimationFrame(tick);
+  }
+  function tick(){
+    fxc.clearRect(0,0,innerWidth,innerHeight);
+    parts=parts.filter(function(p){return p.y<innerHeight+40&&p.life<420;});
+    parts.forEach(function(p){
+      p.life++;p.vy+=0.25;p.vx*=0.985;p.vy*=0.985;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;
+      fxc.save();fxc.translate(p.x,p.y);fxc.rotate(p.r);fxc.fillStyle=p.c;
+      if(p.round){fxc.beginPath();fxc.arc(0,0,p.h/2,0,6.283);fxc.fill();}
+      else{var sc=Math.abs(Math.cos(p.life*0.15))+0.1;fxc.fillRect(-p.w/2,-p.h*sc/2,p.w,p.h*sc);}
+      fxc.restore();
+    });
+    if(parts.length)raf=requestAnimationFrame(tick);
+    else{raf=null;fxc.clearRect(0,0,innerWidth,innerHeight);}
+  }
+  function burstAt(el,n,p){if(!el)return;var r=el.getBoundingClientRect();confetti(r.left+r.width/2,r.top+Math.min(r.height/3,80),n,p);}
+  function bigParty(){
+    confetti(innerWidth*0.15,innerHeight*0.95,100,17);
+    confetti(innerWidth*0.85,innerHeight*0.95,100,17);
+    setTimeout(function(){confetti(innerWidth/2,innerHeight*0.7,130,15);},380);
+  }
+
+  function spkBtn(word,locked){
+    return '<button class="spk" data-say="'+esc(word)+'"'+(locked?' disabled title="Prima leggila tu!"':' title="Ascolta"')+'>'+(locked?'🔒':'🔊')+'</button>';
+  }
+  document.addEventListener("click",function(e){
+    var b=e.target.closest(".spk");
+    if(b&&!b.disabled){e.stopPropagation();speak(b.getAttribute("data-say"));}
+  },true);
+
+  /* ---------- Sorting ---------- */
+  var sort={items:[],errors:0,selected:null};
+  function newSort(){
+    var items=[],id=0;
+    active().forEach(function(g){
+      shuffle(g.words).slice(0,state.perSound).forEach(function(w){items.push({id:"w"+(id++),w:w,sym:g.sym,tries:0,placed:false});});
+    });
+    sort={items:shuffle(items),errors:0,selected:null};
+    renderSort();
+  }
+  function cardHTML(it){
+    return '<div class="card'+(sort.selected===it.id?' selected':'')+'" data-id="'+it.id+'"><span class="word">'+esc(it.w)+'</span>'+spkBtn(it.w,state.readFirst)+'</div>';
+  }
+  function renderBank(){
+    var left=sort.items.filter(function(i){return !i.placed;});
+    var bank=$("bank");
+    bank.innerHTML=left.map(cardHTML).join("");
+    bank.classList.toggle("empty",!left.length);
+  }
+  function renderBins(){
+    $("bins").innerHTML=active().map(function(g){
+      var placed=sort.items.filter(function(i){return i.placed&&i.sym===g.sym;});
+      return '<div class="bin" data-sym="'+esc(g.sym)+'" style="--c:'+colorOf(g.sym)+'">'+
+        '<div class="binhead"><span class="ipa">/'+esc(g.sym)+'/</span><span class="key">come in<br><b>'+esc(keyOf(g))+'</b></span>'+spkBtn(keyOf(g),false)+'</div>'+
+        '<div class="drop">'+placed.map(function(i){return '<div class="chip">'+esc(i.w)+spkBtn(i.w,false)+'</div>';}).join("")+'</div></div>';
+    }).join("");
+  }
+  function renderStats(){
+    var tot=sort.items.length,ok=sort.items.filter(function(i){return i.placed;}).length;
+    $("sOk").textContent="✔ "+ok+" / "+tot;
+    $("sBad").textContent="✘ "+sort.errors+(sort.errors===1?" errore":" errori");
+  }
+  function renderSort(){renderBank();renderBins();renderStats();}
+
+  function binEl(sym){return Array.prototype.find.call(document.querySelectorAll(".bin"),function(b){return b.getAttribute("data-sym")===sym;});}
+  function place(id,sym){
+    var it=sort.items.find(function(i){return i.id===id;});
+    if(!it||it.placed) return;
+    sort.selected=null;
+    var bin=binEl(sym);
+    if(it.sym===sym){
+      it.placed=true;
+      renderSort();
+      var nb=binEl(sym);if(nb){nb.classList.add("right");setTimeout(function(){nb.classList.remove("right");},500);}
+      var binDone=sort.items.every(function(i){return i.sym!==sym||i.placed;});
+      var allDone=sort.items.every(function(i){return i.placed;});
+      if(binDone&&!allDone){sfx("complete");burstAt(nb,55,10);}
+      else{sfx("right");burstAt(nb,14,6);}
+      var w=it.w;setTimeout(function(){speak(w);},binDone?480:260);
+      if(allDone) setTimeout(endSort,1100);
+    }else{
+      sfx("wrong");
+      it.tries++;sort.errors++;
+      renderBank();renderStats();
+      if(bin){bin.classList.remove("wrong");void bin.offsetWidth;bin.classList.add("wrong");}
+      var c=document.querySelector('.card[data-id="'+id+'"]');
+      if(c){c.classList.add("shake");setTimeout(function(){c.classList.remove("shake");},500);}
+    }
+  }
+  function endSort(){
+    var tot=sort.items.length,first=sort.items.filter(function(i){return i.tries===0;}).length;
+    var tricky=sort.items.filter(function(i){return i.tries>0;});
+    var pct=tot?first/tot:0;
+    var title=pct===1?"Caso risolto alla perfezione! 🕵️":pct>=.75?"Caso risolto! 🕵️":"Caso chiuso… con qualche indizio sbagliato 🔎";
+    var html='<h2>'+title+'</h2><div class="big">'+first+' parole su '+tot+' giuste al primo colpo</div>';
+    if(tricky.length){
+      html+='<p style="font-weight:700;color:var(--muted)">Parole da riascoltare e ripetere insieme:</p><div class="review">'+
+        tricky.map(function(i){return '<div class="chip">'+esc(i.w)+' <span class="ipa" style="color:'+colorOf(i.sym)+'">/'+esc(i.sym)+'/</span>'+spkBtn(i.w,false)+'</div>';}).join("")+'</div>';
+    }else html+='<div class="review"></div>';
+    html+='<button class="btn big" data-close="sort">🔄 Nuova partita</button> <button class="btn big light" data-close="x">Chiudi</button>';
+    showModal(html);
+    sfx("win");bigParty();
+  }
+
+  // Drag & drop (mouse, pen, touch) + tap-to-select
+  var drag=null;
+  $("bank").addEventListener("pointerdown",function(e){
+    var card=e.target.closest(".card");
+    if(!card||e.target.closest(".spk")) return;
+    if(e.button!==undefined&&e.button!==0) return;
+    e.preventDefault();
+    drag={card:card,id:card.getAttribute("data-id"),x0:e.clientX,y0:e.clientY,moved:false,ghost:null,ox:0,oy:0};
+  });
+  function binAt(x,y){var el=document.elementFromPoint(x,y);return el?el.closest(".bin"):null;}
+  function clearHover(){Array.prototype.forEach.call(document.querySelectorAll(".bin.hover"),function(b){b.classList.remove("hover");});}
+  document.addEventListener("pointermove",function(e){
+    if(!drag) return;
+    var dx=e.clientX-drag.x0,dy=e.clientY-drag.y0;
+    if(!drag.moved&&Math.hypot(dx,dy)>8){
+      drag.moved=true;
+      var r=drag.card.getBoundingClientRect();
+      drag.ox=drag.x0-r.left;drag.oy=drag.y0-r.top;
+      var g=drag.card.cloneNode(true);g.classList.add("ghost");g.classList.remove("selected");
+      g.style.width=r.width+"px";document.body.appendChild(g);drag.ghost=g;
+      drag.card.classList.add("dragging");
+      sfx("pick");
+    }
+    if(drag.moved){
+      drag.ghost.style.left=(e.clientX-drag.ox)+"px";drag.ghost.style.top=(e.clientY-drag.oy)+"px";
+      clearHover();var b=binAt(e.clientX,e.clientY);if(b)b.classList.add("hover");
+    }
+  });
+  function endDrag(e,cancel){
+    if(!drag) return;
+    var d=drag;drag=null;clearHover();
+    if(d.moved){
+      if(d.ghost)d.ghost.remove();d.card.classList.remove("dragging");
+      if(!cancel){var b=binAt(e.clientX,e.clientY);if(b)place(d.id,b.getAttribute("data-sym"));}
+    }else if(!cancel){
+      sort.selected=(sort.selected===d.id)?null:d.id;
+      if(sort.selected)sfx("pick");
+      Array.prototype.forEach.call(document.querySelectorAll("#bank .card"),function(c){c.classList.toggle("selected",c.getAttribute("data-id")===sort.selected);});
+      Array.prototype.forEach.call(document.querySelectorAll(".bin"),function(b){b.classList.toggle("target",!!sort.selected);});
+    }
+  }
+  document.addEventListener("pointerup",function(e){endDrag(e,false);});
+  document.addEventListener("pointercancel",function(e){endDrag(e,true);});
+  $("bins").addEventListener("click",function(e){
+    if(e.target.closest(".spk")) return;
+    var b=e.target.closest(".bin");
+    if(b&&sort.selected) place(sort.selected,b.getAttribute("data-sym"));
+  });
+  $("newSort").addEventListener("click",newSort);
+
+  /* ---------- Odd one out ---------- */
+  var odd={round:0,total:10,score:0,answered:false,cards:[],oddSym:null};
+  function newOdd(){odd.round=0;odd.score=0;nextOdd();}
+  function nextOdd(){
+    var groups=active();
+    var big=groups.filter(function(g){return g.words.length>=3;});
+    var grid=$("oddgrid");
+    $("oddNext").classList.add("hidden");$("oddfb").textContent="";$("oddfb").className="oddfeedback";
+    $("oddwrap").classList.remove("answered");
+    if(!big.length||groups.length<2){grid.innerHTML='<p>Servono almeno due suoni e uno con 3 o più parole. Aggiungetele nella scheda ⚙️ Parole.</p>';return;}
+    if(odd.round>=odd.total){endOdd();return;}
+    odd.round++;
+    var A=big[Math.floor(Math.random()*big.length)];
+    var others=groups.filter(function(g){return g!==A;});
+    var B=others[Math.floor(Math.random()*others.length)];
+    var cards=shuffle(A.words).slice(0,3).map(function(w){return {w:w,sym:A.sym};});
+    cards.push({w:B.words[Math.floor(Math.random()*B.words.length)],sym:B.sym});
+    odd.cards=shuffle(cards);odd.oddSym=B.sym;odd.answered=false;
+    grid.innerHTML=odd.cards.map(function(c,i){
+      return '<div class="oddcard" data-i="'+i+'"><span class="w">'+esc(c.w)+'</span>'+spkBtn(c.w,state.readFirst)+'<span class="s ipa" style="color:'+colorOf(c.sym)+'">/'+esc(c.sym)+'/</span></div>';
+    }).join("");
+    $("oRound").textContent="Round "+odd.round+" / "+odd.total;
+    $("oScore").textContent="Punti: "+odd.score;
+  }
+  $("oddgrid").addEventListener("click",function(e){
+    if(e.target.closest(".spk")) return;
+    var el=e.target.closest(".oddcard");
+    if(!el||odd.answered) return;
+    odd.answered=true;
+    var c=odd.cards[+el.getAttribute("data-i")];
+    var right=c.sym===odd.oddSym;
+    if(right)odd.score++;
+    Array.prototype.forEach.call(document.querySelectorAll(".oddcard"),function(x){
+      var cc=odd.cards[+x.getAttribute("data-i")];
+      if(cc.sym===odd.oddSym)x.classList.add("isodd");
+      var b=x.querySelector(".spk");b.disabled=false;b.textContent="🔊";b.title="Ascolta";
+    });
+    if(!right)el.classList.add("wrongpick");
+    if(right){sfx("right");burstAt(el,45,9);}else sfx("wrong");
+    $("oddwrap").classList.add("answered");
+    var oc=odd.cards.find(function(x){return x.sym===odd.oddSym;});
+    var fb=$("oddfb");
+    fb.className="oddfeedback "+(right?"ok":"bad");
+    fb.innerHTML=right?"✔ Esatto! «"+esc(oc.w)+"» ha un suono diverso.":"✘ Non proprio: l'intruso era «"+esc(oc.w)+"». Ascoltate tutte e quattro le parole!";
+    $("oScore").textContent="Punti: "+odd.score;
+    var nx=$("oddNext");nx.textContent=odd.round>=odd.total?"Vedi il risultato ▶":"Avanti ▶";nx.classList.remove("hidden");
+  });
+  function endOdd(){
+    var p=odd.score,t=odd.total;
+    showModal('<h2>'+(p===t?"Orecchio da detective! 🕵️":p>=7?"Ottimo lavoro! 🔎":"Indagine conclusa 🔎")+'</h2><div class="big">'+p+' intrusi trovati su '+t+'</div><div class="review"></div><button class="btn big" data-close="odd">🔄 Gioca ancora</button> <button class="btn big light" data-close="x">Chiudi</button>');
+    if(p>=t/2){sfx("win");bigParty();}else{sfx("complete");confetti(innerWidth/2,innerHeight*0.7,40,12);}
+  }
+  $("oddNext").addEventListener("click",nextOdd);
+  $("newOdd").addEventListener("click",newOdd);
+
+  /* ---------- Modal ---------- */
+  function showModal(html){$("modal").innerHTML=html;$("overlay").classList.remove("hidden");}
+  $("overlay").addEventListener("click",function(e){
+    var b=e.target.closest("[data-close]");
+    if(!b&&e.target!==$("overlay")) return;
+    $("overlay").classList.add("hidden");
+    var a=b&&b.getAttribute("data-close");
+    if(a==="sort")newSort();else if(a==="odd")newOdd();
+  });
+
+  /* ---------- Teacher ---------- */
+  function renderPreview(groups){
+    $("preview").innerHTML=groups.map(function(g){return '<span><span class="ipa" style="color:'+colorOf(g.sym)+'">/'+esc(g.sym)+'/</span> · '+g.words.length+' parole</span>';}).join("");
+  }
+  function canonicalText(groups){return groups.map(function(g){return g.sym+": "+g.words.join(", ");}).join("\n");}
+  $("wordsTa").value=canonicalText(state.groups);
+  renderPreview(state.groups);
+  $("wordsTa").addEventListener("input",function(){renderPreview(parse($("wordsTa").value).groups);});
+  $("saveWords").addEventListener("click",function(){
+    var r=parse($("wordsTa").value),m=$("wordsMsg");
+    if(r.groups.length<2){m.className="msg bad";m.textContent="Servono almeno due suoni con delle parole.";return;}
+    state.groups=r.groups;state.text=canonicalText(r.groups);
+    $("wordsTa").value=state.text;renderPreview(r.groups);
+    try{localStorage.setItem(STORE,state.text);}catch(e){}
+    m.className="msg "+(r.errors.length?"bad":"ok");
+    m.textContent=r.errors.length?"Salvato, ma controlla: "+r.errors.slice(0,3).join(" · "):"✔ Salvato! Le partite useranno queste parole.";
+    newSort();newOdd();
+  });
+  $("resetWords").addEventListener("click",function(){
+    $("wordsTa").value=DEFAULT_TEXT;renderPreview(parse(DEFAULT_TEXT).groups);
+    $("wordsMsg").className="msg";$("wordsMsg").textContent="Premi «Salva e usa» per confermare.";
+  });
+  $("perSound").addEventListener("change",function(){state.perSound=parseInt(this.value,10)||4;newSort();});
+
+  /* ---------- Common controls ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(t){
+    t.addEventListener("click",function(){
+      var v=t.getAttribute("data-view");state.view=v;
+      Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(x){x.setAttribute("aria-selected",x===t?"true":"false");});
+      ["sort","odd","teacher"].forEach(function(n){$("view-"+n).classList.toggle("hidden",n!==v);});
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("#levelSeg button"),function(b){
+    b.addEventListener("click",function(){
+      state.level=b.getAttribute("data-level");
+      Array.prototype.forEach.call(document.querySelectorAll("#levelSeg button"),function(x){x.classList.toggle("on",x===b);});
+      newSort();newOdd();
+    });
+  });
+  $("readFirst").addEventListener("change",function(){
+    state.readFirst=this.checked;
+    renderBank();
+    if(!odd.answered){
+      Array.prototype.forEach.call(document.querySelectorAll(".oddcard .spk"),function(b){b.disabled=state.readFirst;b.textContent=state.readFirst?"🔒":"🔊";});
+    }
+  });
+  $("fsBtn").addEventListener("click",function(){
+    try{
+      if(document.fullscreenElement){document.exitFullscreen();}
+      else{var p=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();if(p&&p.catch)p.catch(function(){});}
+    }catch(e){}
+  });
+
+  newSort();newOdd();
+})();
+</script>
+</body>
+</html>
